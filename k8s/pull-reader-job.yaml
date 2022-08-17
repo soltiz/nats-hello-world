@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nats-pull-reader
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: reader
+          image: "kast-registry:30005/nats-tester:latest"
+          imagePullPolicy: IfNotPresent
+          args:
+            - reader
+            - --pull
+            - "10"
+            - -s
+            - nats.default:4222
+            - -v
