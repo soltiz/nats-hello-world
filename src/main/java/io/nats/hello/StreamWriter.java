@@ -1,5 +1,7 @@
 package io.nats.hello;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
 import java.time.Duration;
 
 import io.nats.client.Connection;
@@ -51,9 +53,18 @@ public class StreamWriter
             for (int iMsg = 0 ; iMsg < nbMessages ; iMsg++) {
                 Date date = new Date();
                 System.out.println();
+                StreamRecord record = new StreamRecord();
 
                 String payload = String.format("Message #%d sent at %s.", iMsg, formatter.format(date));
-                js.publish("flow", payload.getBytes());
+
+                record.setTimestamp(payload);
+                try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                     ObjectOutputStream oos = new ObjectOutputStream(bos)) {
+                    oos.writeObject(record);
+                    js.publish("flow", bos.toByteArray());
+                }
+
+
 
             }
 

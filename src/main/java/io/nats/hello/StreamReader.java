@@ -3,8 +3,14 @@ package io.nats.hello;
 // Author: C. Van Frachem
 // Derivated from java-nats-examples/hello-world
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
+import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
 import com.codahale.metrics.Snapshot;
 import io.nats.client.Connection;
 import io.nats.client.JetStream;
@@ -45,9 +51,7 @@ public class StreamReader
             }
         }
 
-        final MetricRegistry metrics = new MetricRegistry();
-
-        final Histogram latencies = metrics.histogram("overall-latency");
+        final Histogram latencies = new Histogram(new SlidingTimeWindowArrayReservoir(120, TimeUnit.SECONDS));
 
 //        responseSizes.update(response.getContent().length);
 
@@ -95,7 +99,14 @@ public class StreamReader
             while ( m != null) {
                 latencies.update(60);
                 if (isVerbose) {
-                    System.out.println("Message: " + m.getSubject() + " " + new String(m.getData()));
+
+                    byte[] payload = m.getData();
+                    try (ByteArrayInputStream bis = new ByteArrayInputStream(payload);
+                         ObjectInputStream ois = new ObjectInputStream(bis)) {
+                        StreamRecord record = (StreamRecord) ois.readObject();
+                        System.out.println("Message: " + m.getSubject() + " " + record.getTimestamp());
+                    }
+
                     JsonUtils.printFormatted(m.metaData());
                 }
                 m.ack();
@@ -111,10 +122,12 @@ public class StreamReader
             }
 
             Snapshot ms = latencies.getSnapshot();
-            System.out.println(String.format("Number of retrieved messages: %d", ms.size()));
+            System.out.println(String.format("Number of retrieved messages: %d", latencies.getCount()));
+            System.out.println(String.format("Number of samples in histogram reservoir: %d", ms.size()));
+
             System.out.println(String.format("Min latency: %d ms", ms.getMin()));
-            System.out.println(String.format("Max latency: %d ms", ms.getMax()));
             System.out.println(String.format("Average latency: %f ms", ms.getMean()));
+            System.out.println(String.format("Max latency: %d ms", ms.getMax()));
 
         }
         catch (Exception e) {
