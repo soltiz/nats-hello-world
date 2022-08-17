@@ -51,14 +51,21 @@ https://github.com/nats-io/natscli/releases
 	load-image.sh /tmp/nats-tester.tar
 
 
-## Running nats cli in k8s
-
-	kubectl exec -n default -it deployment/nats-box -- /bin/sh -l
 	kubectl apply -f k8s/writer-job.yaml 
 	kubectl apply -f k8s/pull-reader-job.yaml 
 	klogs -l job-name=nats-pull-reader # Do not stop the reader (at first, it receives nothing) : 
 									   # start the writer in an other window
 	kubectl apply -f k8s/writer-job.yaml  
+
+
+## Running nats cli in k8s
+
+	kubectl exec -n default -it deployment/nats-box -- /bin/sh -l
+	nats stream ls
+	nats sub flow # Subscribe to writers
+	nats consumer ls teststream
+	nats consumer info teststream pull-client
+
 
 
 

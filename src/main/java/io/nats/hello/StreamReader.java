@@ -45,7 +45,6 @@ public class StreamReader
                 argi ++;
                 batchSize=Integer.parseInt(args[argi]);
             } else if ( "-s".contentEquals(arg) ) {
-                isPullMode = true;
                 argi ++;
                 server=args[argi];
             } else if ( "-v".contentEquals(arg)) {
