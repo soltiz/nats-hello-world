@@ -22,16 +22,30 @@ public class StreamWriter
     public static void main( String[] args )
     {
         int nbMessages = 5;
-
-        for (int argi=0 ; argi < args.length ; argi++) {
-            if ( "-n".contentEquals(args[argi]) ) {
-                argi ++;
-                nbMessages=Integer.parseInt(args[argi]);
+        String server = "localhost:4222";
+        for (int argi = 0; argi < args.length ; argi++) {
+            String arg=args[argi];
+            switch (arg) {
+                case "-n":
+                    argi ++;
+                    nbMessages=Integer.parseInt(args[argi]);
+                    break;
+                case "-s":
+                    argi ++;
+                    server=args[argi];
+                    break;
+                default:
+                    System.err.println("Unsupported argument: '" + arg + "'");
+                    System.exit(2);
+                    break;
             }
+
         }
 
 
-        try (Connection nc = Nats.connect("nats://localhost:4222")) {
+
+
+        try (Connection nc = Nats.connect("nats://" + server)) {
             JetStreamManagement jsm = nc.jetStreamManagement();
 
             // Build the configuration

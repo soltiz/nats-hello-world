@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
@@ -35,7 +36,7 @@ public class StreamReader
         boolean isVerbose = false;
         boolean isPullMode = false;
         int initialWaitSeconds = 300;
-
+        String server = "localhost:4222";
         Integer batchSize = null;
         for (int argi=0 ; argi < args.length ; argi++) {
             String arg=args[argi];
@@ -43,6 +44,10 @@ public class StreamReader
                 isPullMode = true;
                 argi ++;
                 batchSize=Integer.parseInt(args[argi]);
+            } else if ( "-s".contentEquals(arg) ) {
+                isPullMode = true;
+                argi ++;
+                server=args[argi];
             } else if ( "-v".contentEquals(arg)) {
                 isVerbose = true;
             } else {
@@ -55,11 +60,22 @@ public class StreamReader
 
 //        responseSizes.update(response.getContent().length);
 
-        try (Connection nc = Nats.connect("nats://localhost:4222")) {
+        try (Connection nc = Nats.connect("nats://" + server )) {
             JetStreamManagement jsm = nc.jetStreamManagement();
 
 
             JetStream js = nc.jetStream();
+
+
+            List<String> names = jsm.getStreamNames();
+            if (names.size()==0) {
+                System.out.println("Warning: no existing stream.");
+            } else {
+                System.out.println("Existing Streams:");
+                for (String name : names) {
+                    System.out.println("  - " + name);
+                }
+            }
 
             JetStreamSubscription sub;
 

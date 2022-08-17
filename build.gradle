@@ -35,6 +35,6 @@ test {
 }
 
 application {
-    mainClassName = 'io.nats.hello.StreamReader'
+    mainClassName = 'io.nats.hello.NatsTester'
 }
 
