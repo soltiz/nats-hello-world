@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -35,7 +36,11 @@ public class StreamReader
     {
         boolean isVerbose = false;
         boolean isPullMode = false;
-        int initialWaitSeconds = 300;
+        Duration initialWaitSeconds = Duration.ofSeconds(300);
+        Duration finalWaitSeconds = Duration.ofSeconds(5);
+        Duration pullWaitMs = Duration.ofMillis(5);
+        int metricsReservoirDurationSeconds = 1200;
+
         String server = "localhost:4222";
         Integer batchSize = null;
         for (int argi=0 ; argi < args.length ; argi++) {
@@ -55,12 +60,12 @@ public class StreamReader
             }
         }
 
-        final Histogram latencies = new Histogram(new SlidingTimeWindowArrayReservoir(120, TimeUnit.SECONDS));
 
 //        responseSizes.update(response.getContent().length);
 
         try (Connection nc = Nats.connect("nats://" + server )) {
             JetStreamManagement jsm = nc.jetStreamManagement();
+
 
 
             JetStream js = nc.jetStream();
@@ -79,7 +84,7 @@ public class StreamReader
             JetStreamSubscription sub;
 
             ConsumerConfiguration config = ConsumerConfiguration.builder()
-                    .deliverPolicy(DeliverPolicy.New)
+                    // .deliverPolicy(DeliverPolicy.New)
                     .build();
 
             if (isPullMode) {
@@ -90,7 +95,7 @@ public class StreamReader
                         .configuration(config)
                         .build();
 
-                sub = js.subscribe("flow", pullOptions);
+                sub = js.subscribe("flow",  pullOptions);
                 sub.pull(batchSize);
 
             } else {
@@ -105,45 +110,71 @@ public class StreamReader
                         .build();
 
 
-                sub = js.subscribe("flow", pushOptions);
+                sub = js.subscribe("flow", "common-queue", pushOptions);
             }
-            System.out.println("Waiting for first available message/batch...");
-            Message m = sub.nextMessage(Duration.ofSeconds(initialWaitSeconds));
-            System.out.println("Processing all available messages until no message available...");
+            while (true) {
+                final Histogram latencies = new Histogram(new SlidingTimeWindowArrayReservoir(metricsReservoirDurationSeconds, TimeUnit.SECONDS));
 
-            while ( m != null) {
-                latencies.update(60);
-                if (isVerbose) {
+                System.out.println();
+                System.out.println("Waiting for available message/batch...");
+                System.out.println();
+                Message m = sub.nextMessage(initialWaitSeconds);
+                Instant startTime = Instant.now();
+                System.out.println(
+                        String.format("Starting at %s. Processing all available messages until no message available...",
+                                startTime.toString()));
+                Instant deserializedInstant = Instant.now();
 
+                while (m != null) {
                     byte[] payload = m.getData();
                     try (ByteArrayInputStream bis = new ByteArrayInputStream(payload);
                          ObjectInputStream ois = new ObjectInputStream(bis)) {
                         StreamRecord record = (StreamRecord) ois.readObject();
-                        System.out.println("Message: " + m.getSubject() + " " + record.getTimestamp());
+                        deserializedInstant = Instant.now();
+
+                        long overallLatency = Duration.between(record.getCreation(), deserializedInstant).toNanos();
+                        latencies.update(overallLatency);
+                        if (isVerbose) {
+                            System.out.println(
+                                    String.format(
+                                            "Subject: \"%s\" latency(µs)=%d  Message sent at %s.",
+                                            m.getSubject(),
+                                            overallLatency / 1000,
+                                            record.getCreation().toString()
+                                    )
+                            );
+                            JsonUtils.printFormatted(m.metaData());
+                        }
                     }
 
-                    JsonUtils.printFormatted(m.metaData());
-                }
-                m.ack();
-                if (isPullMode) {
-                    m = sub.nextMessage(Duration.ofMillis(5));
-                    sub.pull(batchSize);
-                    if (m==null) {
-                        m = sub.nextMessage(Duration.ofSeconds(5));
+
+                    m.ack();
+                    if (isPullMode) {
+                        m = sub.nextMessage(pullWaitMs);
+                        if (m == null) {
+                            sub.pull(batchSize);
+                            m = sub.nextMessage(finalWaitSeconds);
+                        }
+                    } else {
+                        m = sub.nextMessage(finalWaitSeconds);
                     }
-                } else {
-                    m = sub.nextMessage(Duration.ofSeconds(5));
                 }
+
+                Snapshot ms = latencies.getSnapshot();
+                long receptionDurationMs = Duration.between(startTime, deserializedInstant).toMillis();
+                Double throughput = latencies.getCount() / (receptionDurationMs / 1000.0);
+                System.out.println(String.format("No more available messages after %s.", deserializedInstant.toString()));
+                System.out.println(String.format("Messages actual reception timeframe: %f seconds", receptionDurationMs/1000.0  ));
+                System.out.println(String.format("Number of retrieved messages: %d", latencies.getCount()));
+                System.out.println(String.format("Average retrieval speed: %d messages/second", throughput.intValue()));
+                System.out.println(String.format("Number of samples in histogram reservoir: %d", ms.size()));
+
+                System.out.println(String.format("Min latency: %d ms", ms.getMin() / 1000000));
+                System.out.println(String.format("Average end-to-end latency: %f ms", ms.getMean() / 1000000));
+                System.out.println(String.format("Max latency: %d ms", ms.getMax() / 1000000));
+                System.out.println(String.format("Standard deviation of end-to-end latency: %f ms", ms.getStdDev() / 1000000));
+
             }
-
-            Snapshot ms = latencies.getSnapshot();
-            System.out.println(String.format("Number of retrieved messages: %d", latencies.getCount()));
-            System.out.println(String.format("Number of samples in histogram reservoir: %d", ms.size()));
-
-            System.out.println(String.format("Min latency: %d ms", ms.getMin()));
-            System.out.println(String.format("Average latency: %f ms", ms.getMean()));
-            System.out.println(String.format("Max latency: %d ms", ms.getMax()));
-
         }
         catch (Exception e) {
             e.printStackTrace();

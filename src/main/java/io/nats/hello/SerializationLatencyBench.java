@@ -43,15 +43,10 @@ public class SerializationLatencyBench
             final Histogram latencies = new Histogram(new SlidingTimeWindowArrayReservoir(120, TimeUnit.SECONDS));
             SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
-            long minl = 1000000;
-            long maxl = 0;
-
-            for (int iMsg = 0; iMsg < nbMessages; iMsg++) {
+            for (long iMsg = 0; iMsg < nbMessages; iMsg++) {
                 Date date = new Date();
-                StreamRecord record = new StreamRecord();
-                String payload = String.format("Message #%d sent at %s.", iMsg, record.getCreation().toString());
+                StreamRecord record = new StreamRecord(1839.000754, 25649.23456, 1182.123456, -67.18346, 12.3456, -0.0001874, 4.567, 8.910, 0.001234, 14156.1);
 
-                record.setTimestamp(payload);
                 try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
                      ObjectOutputStream oos = new ObjectOutputStream(bos)) {
                     oos.writeObject(record);
@@ -63,21 +58,16 @@ public class SerializationLatencyBench
                         StreamRecord rec = (StreamRecord) ois.readObject();
                         Instant deserialized = Instant.now();
                         long latency = Duration.between(rec.getCreation(), deserialized).toNanos() / 1000;
-                        if (latency > maxl) {
-                            maxl = latency;
-                        }
-                        if (latency < minl) {
-                            minl = latency;
-                        }
                         if (isVerbose) {
+                            System.out.println(
 
-                            System.out.println("Deserialized: " + rec.getTimestamp() + " overall latency=" + latency + "ns");
-
-                            Instant a = Instant.now();
-                            Instant b = Instant.now();
-                            long xlat = Duration.between(a, b).toNanos() / 1000;
-                            System.out.println("XLat=" + xlat + "ns");
-
+                                    String.format(
+                                        "latency(ms)=%d  Message # %d sent at %s.",
+                                        iMsg,
+                                            latency/1000,
+                                        record.getCreation().toString()
+                                )
+                            );
 
                         }
                         if (iMsg > 200000) {
@@ -89,8 +79,8 @@ public class SerializationLatencyBench
             Snapshot ms = latencies.getSnapshot();
             System.out.println(String.format("Number of serialized/deserialized messages: %d", latencies.getCount()));
             System.out.println(String.format("Number of samples in histogram reservoir: %d", ms.size()));
-            System.out.println(String.format("Min latency: %d µs vs %d", ms.getMin(), minl));
-            System.out.println(String.format("Max latency: %d µs vs %d ", ms.getMax(), maxl));
+            System.out.println(String.format("Min latency: %d µs ", ms.getMin()));
+            System.out.println(String.format("Max latency: %d µs ", ms.getMax()));
             System.out.println(String.format("Average latency: %f µs", ms.getMean()));
             System.out.println(String.format("latency stddev: %f µs", ms.getStdDev()));
 
