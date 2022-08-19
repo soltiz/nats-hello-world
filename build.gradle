@@ -38,6 +38,6 @@ test {
 }
 
 application {
-    mainClassName = 'io.nats.hello.NatsTester'
+    mainClassName = 'io.nats.benchmark.NatsTester'
 }
 

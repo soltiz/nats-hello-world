@@ -1,7 +1,6 @@
 FROM openjdk:11
 RUN mkdir /app
-COPY build/distributions/hello-world.tar /app
+COPY build/distributions/nats-tester.tar /app
 WORKDIR /app
-RUN tar xf hello-world.tar
-ENTRYPOINT ["/app/hello-world/bin/hello-world"]
-# ENTRYPOINT ["/app/hello-world/bin/hello-world", "reader", "-s", "host.docker.internal:4222"]
+RUN tar xf nats-tester.tar
+ENTRYPOINT ["/app/nats-tester/bin/nats-tester"]
