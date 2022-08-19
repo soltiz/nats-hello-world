@@ -53,6 +53,7 @@ public class StreamWriter
     {
         int nbMessages = 5;
         String server = "localhost:4222";
+        String flow = "testflow";
         boolean isEmissionActive = true;
         SyncMode syncMode = SyncMode.SYNC;
         boolean isJsonOutput = false;
@@ -70,7 +71,11 @@ public class StreamWriter
                     argi ++;
                     server=args[argi];
                     break;
-                case "--nosend":
+                case "--flow":
+                    argi++;
+                    flow = args[argi];
+                    break;
+                    case "--nosend":
                     isEmissionActive = false;
                     break;
                 case "--async-batches":
@@ -97,20 +102,6 @@ public class StreamWriter
 
 
         try (Connection nc = Nats.connect("nats://" + server)) {
-            JetStreamManagement jsm = nc.jetStreamManagement();
-
-            // Build the configuration
-            StreamConfiguration streamConfig = StreamConfiguration.builder()
-                    .name("teststream")
-                    .storageType(StorageType.Memory)
-                    .subjects("flow")
-                    .build();
-
-            // Create the stream
-            StreamInfo streamInfo = jsm.addStream(streamConfig);
-            if (!isJsonOutput) {
-                JsonUtils.printFormatted(streamInfo);
-            }
 
             SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
@@ -142,10 +133,10 @@ public class StreamWriter
                     oos.writeObject(record);
                     if (isEmissionActive) {
                         if (syncMode == SyncMode.SYNC) {
-                            js.publish("flow", bos.toByteArray());
+                            js.publish(flow, bos.toByteArray());
                         } else
                         {
-                            futures.add(js.publishAsync("flow", bos.toByteArray()));
+                            futures.add(js.publishAsync(flow, bos.toByteArray()));
                             if (futures.size() >= asyncBatchSize ) {
                               checkFutureAcks(futures);
                               futures = new ArrayList<>();

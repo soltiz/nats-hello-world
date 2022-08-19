@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nats-stream-init
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: writer
+          image: "kast-registry:30005/nats-tester:latest"
+          imagePullPolicy: IfNotPresent
+          args:
+            - init
+            - --stream
+            - demo-stream
+            - --flow
+            - demo-flow
+            - -s
+            - nats.default:4222

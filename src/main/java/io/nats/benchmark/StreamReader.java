@@ -22,6 +22,9 @@ import io.nats.client.JetStreamSubscription;
 import io.nats.client.Message;
 import io.nats.client.Nats;
 import io.nats.client.api.ConsumerConfiguration;
+import io.nats.client.api.StorageType;
+import io.nats.client.api.StreamConfiguration;
+import io.nats.client.api.StreamInfo;
 import io.nats.client.support.JsonUtils;
 import com.codahale.metrics.Histogram;
 import io.nats.client.*;
@@ -36,6 +39,7 @@ public class StreamReader
 
 
         boolean isVerbose = false;
+        String flow = "testflow";
         PullMode pullMode = PullMode.PUSH;
         boolean isJsonOutput = false;
         Integer maxListeningSessions = null;
@@ -48,6 +52,7 @@ public class StreamReader
 
         String server = "localhost:4222";
         Integer batchSize = null;
+        String clientId = null;
         for (int argi=0 ; argi < args.length ; argi++) {
             String arg=args[argi];
             switch (arg) {
@@ -55,6 +60,10 @@ public class StreamReader
                     pullMode = PullMode.PULL;
                     argi++;
                     batchSize = Integer.parseInt(args[argi]);
+                    break;
+                case "--flow":
+                    argi++;
+                    flow = args[argi];
                     break;
                 case "--max-listening-sessions":
                     argi++;
@@ -74,6 +83,10 @@ public class StreamReader
                     argi++;
                     testId = args[argi];
                     break;
+                case "--client-id":
+                    argi++;
+                    clientId = args[argi];
+                    break;
                 default:
                     System.err.println(String.format("Unexpected parameter '%s'.",arg));
                     System.exit(1);
@@ -84,22 +97,27 @@ public class StreamReader
 //        responseSizes.update(response.getContent().length);
 
         try (Connection nc = Nats.connect("nats://" + server )) {
-            JetStreamManagement jsm = nc.jetStreamManagement();
-
-
-
             JetStream js = nc.jetStream();
+            JetStreamManagement jsm = nc.jetStreamManagement();
+            jsm.getStreamNamesBySubjectFilter(flow);
 
 
-            List<String> names = jsm.getStreamNames();
+            List<String> names = jsm.getStreamNamesBySubjectFilter(flow);
             if (!isJsonOutput) {
 
                 if (names.size() == 0) {
-                    System.out.println("Warning: no existing stream.");
+                    System.out.println("Warning: no existing stream for '" + flow + "' flow.");
+                    System.exit(4);
                 } else {
-                    System.out.println("Existing Streams:");
+                    System.out.println("Existing Streams for '" + flow + "' flow:");
                     for (String name : names) {
                         System.out.println("  - " + name);
+                    }
+                    if (isVerbose) {
+                        for (String streamName : names) {
+                            StreamInfo streamInfo = jsm.getStreamInfo(streamName);
+                            JsonUtils.printFormatted(streamInfo);
+                        }
                     }
                 }
             }
@@ -109,30 +127,31 @@ public class StreamReader
                     // .deliverPolicy(DeliverPolicy.New)
                     .build();
 
+            if (! isJsonOutput) { System.out.println(pullMode.toString() + " consumer mode");}
+            if (clientId == null) {
+                clientId = pullMode.toString().toLowerCase() + "-client";
+            }
+
             if (pullMode == PullMode.PULL) {
-                if (! isJsonOutput) { System.out.println("PULL consumer mode");}
                 // Build our subscription options.
                 PullSubscribeOptions pullOptions = PullSubscribeOptions.builder()
-                        .durable("pull-client")
+                        .durable(clientId)
                         .configuration(config)
                         .build();
 
-                sub = js.subscribe("flow",  pullOptions);
+                sub = js.subscribe(flow,  pullOptions);
                 sub.pull(batchSize);
 
             } else {
-                if (! isJsonOutput) { System.out.println("PUSH consumer mode"); }
 
                 // Build our subscription options.
-
-
                 PushSubscribeOptions pushOptions = PushSubscribeOptions.builder()
-                        .durable("push-client")
+                        .durable(clientId)
                         .configuration(config)
                         .build();
 
 
-                sub = js.subscribe("flow", "common-queue", pushOptions);
+                sub = js.subscribe(flow, "common-queue", pushOptions);
             }
             int listeningSession = 0;
             while (maxListeningSessions == null || listeningSession < maxListeningSessions) {
@@ -205,8 +224,8 @@ public class StreamReader
                 double receptionTimeframeSeconds = receptionDurationMs / 1000.0;
                 long minLatencyMs = ms.getMin() / 1000000;
                 long maxLatencyMs = ms.getMax() / 1000000;
-                double avgLatencyMs = ms.getMean() / 1000000;
-                double stdDeviationLatencyMs = ms.getMin() / 1000000;
+                double avgLatencyMs = ms.getMean() / 1000000.0;
+                double stdDeviationLatencyMs = ms.getStdDev() / 1000000.0;
                 if (isJsonOutput) {
                     System.out.println((new ReadSessionEndEvent(
                             startTime,

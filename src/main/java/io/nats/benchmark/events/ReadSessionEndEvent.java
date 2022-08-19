@@ -40,20 +40,16 @@ public class ReadSessionEndEvent extends TestEvent {
         return pullBatchSize;
     }
 
-    public long getReceivedMessagesCount() {
-        return receivedMessagesCount;
+    public long getNbMessages() {
+        return nbMessages;
     }
 
-    public long getReceptionDurationMs() {
-        return receptionDurationMs;
+    public int getMsgRate() {
+        return msgRate;
     }
 
-    public int getMessages_rate() {
-        return messages_rate;
-    }
-
-    public double getReceptionTimeframeSeconds() {
-        return receptionTimeframeSeconds;
+    public double getReceptionDurationSeconds() {
+        return receptionDurationSeconds;
     }
 
     public long getMinLatencyMs() {
@@ -76,10 +72,9 @@ public class ReadSessionEndEvent extends TestEvent {
         return metrics_samples_size;
     }
 
-    long receivedMessagesCount;
-    long receptionDurationMs;
-    int messages_rate;
-    double receptionTimeframeSeconds;
+    long nbMessages;
+    int msgRate;
+    double receptionDurationSeconds;
     long minLatencyMs;
     long maxLatencyMs;
     double avgLatencyMs;
@@ -92,9 +87,9 @@ public class ReadSessionEndEvent extends TestEvent {
             int listeningSession,
             PullMode pullMode, String pullerId,
             String testId, Integer pullBatchSize,
-            long receivedMessagesCount,
-            double receptionTimeframeSeconds,
-            int messages_rate,
+            long nbMessages,
+            double receptionDurationSeconds,
+            int msgRate,
             long minLatencyMs,
             long maxLatencyMs,
             double avgLatencyMs,
@@ -107,9 +102,9 @@ public class ReadSessionEndEvent extends TestEvent {
         this.pullMode = pullMode;
         this.pullerId = pullerId;
         this.pullBatchSize = pullBatchSize;
-        this.receivedMessagesCount = receivedMessagesCount;
-        this.receptionTimeframeSeconds = receptionTimeframeSeconds;
-        this.messages_rate = messages_rate;
+        this.nbMessages = nbMessages;
+        this.receptionDurationSeconds = receptionDurationSeconds;
+        this.msgRate = msgRate;
         this.minLatencyMs = minLatencyMs;
         this.maxLatencyMs = maxLatencyMs;
         this.avgLatencyMs = avgLatencyMs;

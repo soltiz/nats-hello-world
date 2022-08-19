@@ -16,6 +16,9 @@ public class NatsTester {
 
         try {
             switch (arg) {
+                case "init":
+                    StreamInit.main(modifiedArgs);
+                    break;
                 case "reader":
                     StreamReader.main(modifiedArgs);
                     break;
@@ -27,10 +30,10 @@ public class NatsTester {
                     System.exit(2);
                     break;
             }
-            System.exit(0);
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(99);
         }
+        System.exit(0);
     }
 }
