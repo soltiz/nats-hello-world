@@ -1,4 +1,4 @@
-package io.nats.hello;
+package io.nats.benchmark;
 
 // Author: C. Van Frachem
 // Derivated from java-nats-examples/hello-world
@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.*;
-import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Snapshot;
 
 

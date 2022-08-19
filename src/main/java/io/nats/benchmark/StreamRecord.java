@@ -1,4 +1,4 @@
-package io.nats.hello;
+package io.nats.benchmark;
 
 import java.io.Serializable;
 import java.time.Instant;

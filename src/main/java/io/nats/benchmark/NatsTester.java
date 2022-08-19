@@ -1,29 +1,9 @@
-package io.nats.hello;
+package io.nats.benchmark;
 
 // Author: C. Van Frachem
 // Derivated from java-nats-examples/hello-world
 
-import java.io.ByteArrayInputStream;
-import java.io.ObjectInputStream;
-import java.time.Duration;
 import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
-import com.codahale.metrics.Snapshot;
-import io.nats.client.Connection;
-import io.nats.client.JetStream;
-import io.nats.client.JetStreamManagement;
-import io.nats.client.JetStreamSubscription;
-import io.nats.client.Message;
-import io.nats.client.Nats;
-import io.nats.client.PullSubscribeOptions;
-import io.nats.client.PushSubscribeOptions;
-import io.nats.client.api.ConsumerConfiguration;
-import io.nats.client.api.DeliverPolicy;
-import io.nats.client.support.JsonUtils;
 
 public class NatsTester {
     public static void main(String[] args) {
