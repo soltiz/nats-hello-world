@@ -1,5 +1,35 @@
 # Tests de performance via serialisation d'objet java
 
+## Synthese
+
+
+Sauf mention contraire, 
+- les écritures se font avec 1 seul pod groupant ses attentes d'acquittement par lot de 200 messages (asynchrone par lot)
+- les lectures se font avec 1 seul pod, en mode push
+- le régime établi est observé par des sessions d'écritures de nombre de messages croissantss (10K, 10K, 10k, 100k, 300k, 1M), avec 6 à 10s entre chaque session
+  d'écriture.
+- l'écrivain java n'a pas de test permettant de mesurer le "régime établi" ce qui peut expliquer une latence max (phase de chauffage de l'écrivain) importante, meme en régime établi
+  ==> amélioration possible : fournir les sessions d'écriture à 1 meme process écrivain
+
+
+* Sans réplication, sur cluster K8s
+
+  - En régime établi: pour 47 kMsgs / s => 3.6 ms de latence, déviation standard de 5.6 ms . Latence max pouvant aller jusqu'à 80 ms
+      
+  - Pendant la phase de préchauffage java (10000 evénements, traités sur la premiere seconde), des latences bien supérieures : 300 ms.
+
+* Avec replication 2, sur cluster K8s
+
+  - En régime établi: pour 26 kMsgs / s => 6.6 ms de latence, déviation standard de 3.6 ms . Latence max pouvant aller jusqu'à 100 ms
+      
+  - Pendant la phase de préchauffage java (10000 evénements, traités sur la premiere seconde), des latences bien supérieures : 300 ms.
+
+
+
+
+
+
+
 
 ## Tests locaux en mode Write Synchrone
 

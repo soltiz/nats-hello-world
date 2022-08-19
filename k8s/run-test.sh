@@ -2,6 +2,8 @@
 
 export PATH=$PATH:.
 
+: ${REPLICAS:=1}
+
 echo ""
 echo "Initializing stream..."
 echo ""
