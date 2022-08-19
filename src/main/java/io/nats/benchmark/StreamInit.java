@@ -64,7 +64,7 @@ public class StreamInit {
                     break;
                 case "--replicas":
                     argi++;
-                    streamName = args[argi];
+                    replicas = Integer.parseInt(args[argi]);
                     break;
                 default:
                     System.err.println("Unsupported argument: '" + arg + "'");

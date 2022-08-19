@@ -6,6 +6,7 @@ TEST_NUM="$(date +%s)"
 : ${TEST_ID:=${TEST_NUM}}
 : ${NB_MSGS:=10000}
 : ${TIMEOUT:=120s}
+: ${BATCH_SIZE:=200}
 
 JOB_NAME=writer-${TEST_ID}
 
@@ -38,8 +39,7 @@ spec:
             - --test-id
             - "pull-test-${TEST_ID}"
             - --async-batches
-            - "1000"
-"
+            - "${BATCH_SIZE}"
 EOF
 
 

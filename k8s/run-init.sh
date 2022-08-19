@@ -6,6 +6,7 @@ TEST_ID="$(date +%s)"
 JOB_NAME=stream-init-${TEST_ID}
 STREAM=mystream
 FLOW=myflow
+: ${REPLICAS:=1}
 : ${TIMEOUT:=20s}
 
 
@@ -23,7 +24,7 @@ spec:
       containers:
         - name: streaminit
           image: "kast-registry:30005/nats-tester:latest"
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           args:
             - init
             - -s
@@ -32,6 +33,8 @@ spec:
             - ${STREAM}
             - --flow
             - ${FLOW}
+            - --replicas
+            - "${REPLICAS}"
 EOF
 
 kubectl wait --for=condition=Complete job/${JOB_NAME} --timeout=${TIMEOUT}

@@ -45,10 +45,6 @@ in particular because this init subcommand will delete the topic and re-create i
 
 Typical errors:
 
-* "io.nats.client.JetStreamApiException: subjects overlap with an existing stream [10049]"
-
-	This may indicate that the requested replicas number is too big compared to cluster size
-
 * "io.nats.client.JetStreamApiException: stream name already in use [10058]"
 
 	This may indicate that the stream definition is different than the one used to create the same stream name.
@@ -129,11 +125,17 @@ Typical errors:
 	kubectl -n doc-store port-forward service/elasticsearch 9200:9200
 
 
-* Start the test
+* In some window, monitor your test jobs:
+
+	watch -n 1 kubectl get jobs,pods
+
+* Start the test (in an other window, of course)
 
 	cd k8s
 	./run-test.sh  | ./es_indexer.sh 
 
+
+* Go to kibana 
 
 
 

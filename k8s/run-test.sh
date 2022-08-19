@@ -22,9 +22,9 @@ NB_MSGS=10000 run-writer.sh
 sleep 6 # To wait end of session for reader
 NB_MSGS=100000 run-writer.sh
 sleep 6 # To wait end of session for reader
-NB_MSGS=200000 run-writer.sh
-sleep 6  # To wait end of session for reader
 NB_MSGS=300000 run-writer.sh
+sleep 6  # To wait end of session for reader
+NB_MSGS=1000000 run-writer.sh
 
 echo ""
 echo "Waiting for reader stats end..."
