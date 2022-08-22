@@ -2,31 +2,27 @@
 
 export PATH=$PATH:.
 
-: ${REPLICAS:=1}
+: ${REPLICAS:=2}
 
 echo ""
 echo "Initializing stream..."
 echo ""
 run-init.sh
 
+
+export NB_SESSIONS=5
+export TIMEOUT=300s
+export NB_MSGS="10000,10000,100000,300000,1000000"
 echo ""
 echo "Starting reader..."
 echo ""
-NB_SESSIONS=5 TIMEOUT=300s run-reader.sh &
+run-reader.sh &
 READER_ID=$!
 
 sleep 10
-echo "Injecting documents (3 times) ..."
+echo "Injecting documents (${NB_SESSIONS} times) ..."
 echo ""
-NB_MSGS=10000 run-writer.sh
-sleep 6 # To trigger end of session for reader
-NB_MSGS=10000 run-writer.sh
-sleep 6 # To wait end of session for reader
-NB_MSGS=100000 run-writer.sh
-sleep 6 # To wait end of session for reader
-NB_MSGS=300000 run-writer.sh
-sleep 6  # To wait end of session for reader
-NB_MSGS=1000000 run-writer.sh
+run-writer.sh
 
 echo ""
 echo "Waiting for reader stats end..."

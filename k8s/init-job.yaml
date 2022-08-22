@@ -13,8 +13,10 @@ spec:
           args:
             - init
             - --stream
-            - demo-stream
+            - teststream
             - --flow
-            - demo-flow
+            - testflow
             - -s
             - nats.default:4222
+            - --replicas
+            - "2"

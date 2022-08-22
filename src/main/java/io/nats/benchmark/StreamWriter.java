@@ -49,31 +49,81 @@ public class StreamWriter
         }
     }
 
+
+    private static void argError(String message) {
+        System.err.println(getUsage());
+        System.err.println("FATAL ERROR: " + message);
+        System.exit(5);
+    }
+
+
+    private static String getUsage() {
+        final String usage = "" +
+                " Options: \n" +
+                "\n" +
+                "   -s <host:[port]>                    alternate NATS API server (default is localhost:4222) \n" +
+                "   --flow   <flowName>                 the flow into which to write (default is 'testflow'). \n" +
+                "                              It must be associated to a pre-created stream in the NATS cluster \n" +
+                "   -n <msgCount[,msgCount[...]]>       number of messages to send in each sending session(s). Default is 100 messages (one session only). \n" +
+                "   --interval <nbSeconds>              interval in seconds between sending sessions (if more than one). Default is 10 seconds. \n" +
+                "   --async-batches  <batch size>      Instead of sending and waiting for server ack at each message \n" +
+                "                                      activates asynchronous mode, checking acks only after a batch \n" +
+                "                                      of messages has been sent. \n" +
+                "   --test-id   <id string>            Allow to customize testId field in json output, for traceability \n"+
+                "                                      purposes (default is 'test')  \n" +
+                "   --json                              activates json output (1 line per document) to ease post-processing/indexing of events and metrics \n";
+
+        return usage;
+    }
     public static void main( String[] args )
     {
-        int nbMessages = 5;
+        List<Integer> sessionsMessagesCounts = new ArrayList<Integer> ();
+        sessionsMessagesCounts.add(100);
         String server = "localhost:4222";
         String flow = "testflow";
         boolean isEmissionActive = true;
         SyncMode syncMode = SyncMode.SYNC;
         boolean isJsonOutput = false;
         String testId = "test";
+        int intervalBetweenSessionsSeconds = 10;
 
         int asyncBatchSize = 1000;
+
+
+
         for (int argi = 0; argi < args.length ; argi++) {
             String arg=args[argi];
             switch (arg) {
+                case "--help":
+                    System.out.println(getUsage());
+                    System.exit(0);
                 case "-n":
                     argi ++;
-                    nbMessages=Integer.parseInt(args[argi]);
+                    try {
+                        String messagesCountsString = args[argi];
+                        sessionsMessagesCounts= new ArrayList<>();
+                        for (String countString: messagesCountsString.split(",")) {
+                            sessionsMessagesCounts.add(Integer.parseInt(countString));
+                        }
+                    } catch (Exception e){
+                        argError("Expecting comma-separated list of integer argument after '-n'  (e.g. -n 10000 or -n 10,100,1000 ).");
+                    }
                     break;
                 case "-s":
                     argi ++;
-                    server=args[argi];
+                    try {
+                        server = args[argi];
+                    } catch (Exception e) {
+                        argError("Expecting <server[:port]> argument after '-s'.");
+                    }
                     break;
                 case "--flow":
                     argi++;
-                    flow = args[argi];
+                    try {
+                        flow = args[argi];
+                    } catch (Exception e) {
+                        argError("Expecting <flowName> argument after '--flow'.");
+                    }
                     break;
                     case "--nosend":
                     isEmissionActive = false;
@@ -81,18 +131,25 @@ public class StreamWriter
                 case "--async-batches":
                     argi ++;
                     syncMode = SyncMode.ASYNC;
-                    asyncBatchSize=Integer.parseInt(args[argi]);
+                    try {
+                        asyncBatchSize=Integer.parseInt(args[argi]);
+                    } catch  (Exception e){
+                        argError("Expecting integer argument after '--async-batches'.");
+                    }
                     break;
                 case "--json":
                     isJsonOutput = true;
                     break;
                 case "--test-id":
                     argi++;
-                    testId = args[argi];
+                    try {
+                        testId = args[argi];
+                    } catch (Exception e) {
+                        argError("Expecting <testId> argument after '--flow'.");
+                    }
                     break;
                 default:
-                    System.err.println("Unsupported argument: '" + arg + "'");
-                    System.exit(2);
+                    argError("Unsupported argument: '" + arg + "'");
                     break;
             }
 
@@ -106,74 +163,88 @@ public class StreamWriter
             SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
             JetStream js = nc.jetStream();
-            Instant startTime = Instant.now();
 
-            if (isJsonOutput) {
-                System.out.println((new WriteSessionStartEvent(
-                        testId,
-                        startTime,
-                        syncMode,
-                        nbMessages
-                )).toJson());
-            } else {
-                System.out.println(
-                        String.format("Starting at %s - sending messages...",
-                                startTime.toString()));
-            }
 
-            StreamRecord record = null;
-            List<CompletableFuture<PublishAck>> futures = new ArrayList<>();
-
-            for (int iMsg = 0 ; iMsg < nbMessages ; iMsg++) {
-                Date date = new Date();
-                record = new StreamRecord(1839.000754, 25649.23456, 1182.123456, -67.18346, 12.3456, -0.0001874, 4.567, 8.910, 0.001234, 14156.1);
-
-                try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                     ObjectOutputStream oos = new ObjectOutputStream(bos)) {
-                    oos.writeObject(record);
-                    if (isEmissionActive) {
-                        if (syncMode == SyncMode.SYNC) {
-                            js.publish(flow, bos.toByteArray());
-                        } else
-                        {
-                            futures.add(js.publishAsync(flow, bos.toByteArray()));
-                            if (futures.size() >= asyncBatchSize ) {
-                              checkFutureAcks(futures);
-                              futures = new ArrayList<>();
-                            }
-                        }
-
-                    }
-                } catch (Exception e) {
-                    throw(e);
+            int sendingSessionIndex = 0;
+            for ( int nbMessages : sessionsMessagesCounts) {
+                sendingSessionIndex++;
+                if (sendingSessionIndex != 1) {
+                    Thread.sleep(intervalBetweenSessionsSeconds * 1000);
                 }
 
 
-            }
-            checkFutureAcks(futures);
+                Instant startTime = Instant.now();
 
-            Instant lastEventTime = record.getCreation();
-            Double emissionDurationSeconds = Duration.between(startTime, lastEventTime).toMillis() / 1000.0;
-            Double throughput = nbMessages / emissionDurationSeconds;
+                if (isJsonOutput) {
+                    System.out.println((new WriteSessionStartEvent(
+                            testId,
+                            sendingSessionIndex,
+                            startTime,
+                            syncMode,
+                            nbMessages,
+                            flow
+                    )).toJson());
+                } else {
+                    System.out.println(
+                            String.format("Starting at %s - sending messages...",
+                                    startTime.toString()));
+                }
 
-            if (isJsonOutput) {
-                System.out.println((new WriteSessionEndEvent(
-                        testId,
-                        syncMode,
-                        lastEventTime,
-                        nbMessages,
-                        emissionDurationSeconds,
-                        throughput.intValue()
-                )).toJson());
-            } else {
+                StreamRecord record = null;
+                List<CompletableFuture<PublishAck>> futures = new ArrayList<>();
 
 
-                System.out.println(String.format("Finished sending messages at %s. Sent %d objects in %f seconds, which is about %d messages/second",
-                        lastEventTime.toString(),
-                        nbMessages,
-                        emissionDurationSeconds,
-                        throughput.intValue()
-                ));
+                for (int iMsg = 0; iMsg < nbMessages; iMsg++) {
+                    Date date = new Date();
+                    record = new StreamRecord(1839.000754, 25649.23456, 1182.123456, -67.18346, 12.3456, -0.0001874, 4.567, 8.910, 0.001234, 14156.1);
+
+                    try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                         ObjectOutputStream oos = new ObjectOutputStream(bos)) {
+                        oos.writeObject(record);
+                        if (isEmissionActive) {
+                            if (syncMode == SyncMode.SYNC) {
+                                js.publish(flow, bos.toByteArray());
+                            } else {
+                                futures.add(js.publishAsync(flow, bos.toByteArray()));
+                                if (futures.size() >= asyncBatchSize) {
+                                    checkFutureAcks(futures);
+                                    futures = new ArrayList<>();
+                                }
+                            }
+
+                        }
+                    } catch (Exception e) {
+                        throw (e);
+                    }
+
+
+                }
+                checkFutureAcks(futures);
+
+                Instant lastEventTime = record.getCreation();
+                Double emissionDurationSeconds = Duration.between(startTime, lastEventTime).toMillis() / 1000.0;
+                Double throughput = nbMessages / emissionDurationSeconds;
+
+                if (isJsonOutput) {
+                    System.out.println((new WriteSessionEndEvent(
+                            testId,
+                            sendingSessionIndex,
+                            syncMode,
+                            lastEventTime,
+                            nbMessages,
+                            emissionDurationSeconds,
+                            throughput.intValue()
+                    )).toJson());
+                } else {
+
+
+                    System.out.println(String.format("Finished sending messages at %s. Sent %d objects in %f seconds, which is about %d messages/second",
+                            lastEventTime.toString(),
+                            nbMessages,
+                            emissionDurationSeconds,
+                            throughput.intValue()
+                    ));
+                }
             }
 
         }

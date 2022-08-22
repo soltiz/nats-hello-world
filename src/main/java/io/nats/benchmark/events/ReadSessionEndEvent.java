@@ -7,7 +7,7 @@ import io.nats.benchmark.types.PullMode;
 public class ReadSessionEndEvent extends TestEvent {
     Instant startTime;
     Instant lastReceptionTime;
-    int listeningSession;
+    int sessionIndex;
     PullMode pullMode;
     String pullerId;
     Integer pullBatchSize;
@@ -24,8 +24,8 @@ public class ReadSessionEndEvent extends TestEvent {
         return lastReceptionTime.toString();
     }
 
-    public int getListeningSession() {
-        return listeningSession;
+    public int getSessionIndex() {
+        return sessionIndex;
     }
 
     public PullMode getPullMode() {
@@ -84,7 +84,7 @@ public class ReadSessionEndEvent extends TestEvent {
     public ReadSessionEndEvent(
             Instant startTime,
             Instant lastReceptionTime,
-            int listeningSession,
+            int sessionIndex,
             PullMode pullMode, String pullerId,
             String testId, Integer pullBatchSize,
             long nbMessages,
@@ -98,7 +98,7 @@ public class ReadSessionEndEvent extends TestEvent {
         super(testId);
         this.startTime = startTime;
         this.lastReceptionTime = lastReceptionTime;
-        this.listeningSession = listeningSession;
+        this.sessionIndex = sessionIndex;
         this.pullMode = pullMode;
         this.pullerId = pullerId;
         this.pullBatchSize = pullBatchSize;

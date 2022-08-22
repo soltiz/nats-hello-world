@@ -1,11 +1,11 @@
 package io.nats.benchmark.events;
 
-import java.time.Duration;
 import java.time.Instant;
 
 import io.nats.benchmark.types.SyncMode;
 
 public class WriteSessionEndEvent extends TestEvent{
+    private final int sessionIndex;
     SyncMode syncMode;
     Instant lastEventTime;
     int nbMessages;
@@ -32,8 +32,9 @@ public class WriteSessionEndEvent extends TestEvent{
         return msgRate;
     }
 
-    public WriteSessionEndEvent(String testId, SyncMode syncMode, Instant lastEventTime, int nbMessages, Double emissionDurationSeconds, int msgRate) {
+    public WriteSessionEndEvent(String testId, int sessionIndex, SyncMode syncMode, Instant lastEventTime, int nbMessages, Double emissionDurationSeconds, int msgRate) {
         super(testId);
+        this.sessionIndex = sessionIndex;
         this.syncMode = syncMode;
         this.lastEventTime = lastEventTime;
         this.nbMessages = nbMessages;
@@ -44,5 +45,9 @@ public class WriteSessionEndEvent extends TestEvent{
     @Override
     public String getEventType() {
         return "write_session_end";
+    }
+
+    public int getSessionIndex() {
+        return sessionIndex;
     }
 }

@@ -3,7 +3,7 @@
 ## Setup
 
 
-### Local NATS Server
+### Starting Local NATS Server
 
 https://docs.nats.io/running-a-nats-service/introduction/installation#installing-via-docker
 
