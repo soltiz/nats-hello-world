@@ -32,7 +32,7 @@ Please ensure that you have a correctly configured KUBECONFIG:
 	kubectl get nodes
 
 	docker save nats-tester:latest -o /tmp/nats-tester.tar
-	load-image.sh /tmp/nats-tester.tar
+	load-image.sh /tmp/nats-tester.tar 
 
 ## Running topic initialization (in docker)
 
@@ -145,7 +145,7 @@ Options are described here :
 
 * Go to kibana in the latencies view (to be imported from resources directory)
 
-## Actual test command lines
+## Actual test command lines for K8s campaigns
 
 
 * 1 stream receiving 200 messages/s, 1 reader pod only
