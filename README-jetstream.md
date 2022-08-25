@@ -3,7 +3,7 @@
 ## Setup
 
 
-### Starting Local NATS Server
+### Starting Local NATS Server (not useful for K8s campaigns)
 
 https://docs.nats.io/running-a-nats-service/introduction/installation#installing-via-docker
 
@@ -11,7 +11,7 @@ https://docs.nats.io/running-a-nats-service/introduction/installation#installing
 	docker run -p 4222:4222 -ti nats:latest -js
 
 
-### Installing NATS Cli
+### Installing NATS Cli locally (not useful for K8s campaigns)
 
 https://github.com/nats-io/natscli/releases
 
@@ -19,7 +19,7 @@ https://github.com/nats-io/natscli/releases
 	sudo gdebi nats-0.0.33-amd64.deb 
 
 
-### Building tester image:
+### Building tester image using docker:
 
 	bash ./gradlew assemble && docker build -t nats-tester .
 
@@ -56,12 +56,16 @@ Typical errors:
 
 ## Running writer in docker
 
+Options are described here :
 
-* With human-intended console logging, 40 000 messages, synchronously (1 message at a time)
+
+
+
+* Exemple: With human-intended console logging, 40 000 messages, synchronously (1 message at a time)
 
 	docker run -it --rm --add-host=host.docker.internal:host-gateway nats-tester writer -s host.docker.internal:4222 --flow testflow -n 40000
 
-* With machine-intended console json logging, 100 000 messages, assynchronously (5000 messages acks waiting at a time)
+* Exemple: with machine-intended console json logging, 100 000 messages, assynchronously (5000 messages acks waiting at a time)
 
 	docker run -it --rm --add-host=host.docker.internal:host-gateway nats-tester writer -s host.docker.internal:4222 -n 100000 --async-batches 5000 --json
 
