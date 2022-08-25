@@ -1,0 +1,10 @@
+nats:
+  jetstream:
+    enabled: true
+    fileStorage:
+      storageDirectory: /data/jetstream
+      existingClaim: nats-pv-claim
+      claimStorageSize: 10Gi
+cluster:
+  enabled: true
+  replicas: 3

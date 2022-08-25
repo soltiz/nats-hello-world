@@ -14,7 +14,7 @@ public class ReadSessionStartEvent extends TestEvent implements  JsonSerializabl
     Integer batchSize;
 
     public ReadSessionStartEvent(String testId, Instant startTime, int sessionIndex, PullMode pullMode, String pullerId, Integer batchSize) {
-        super(testId);
+        super();
         this.startTime = startTime;
         this.sessionIndex = sessionIndex;
         this.pullMode = pullMode;

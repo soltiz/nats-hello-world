@@ -1,8 +1,16 @@
 #!/bin/bash -ue
 
+export NB_READERS=2
+export TEST_ID=cooperative-readers-${NB_READERS}
+: ${REPLICAS:=2}
+export NB_SESSIONS=4
+export NB_MSGS="10000,10000,100000,2000000"
+export TIMEOUT=400s
+
+
+
 export PATH=$PATH:.
 
-: ${REPLICAS:=2}
 
 echo ""
 echo "Initializing stream..."
@@ -10,9 +18,7 @@ echo ""
 run-init.sh
 
 
-export NB_SESSIONS=5
-export TIMEOUT=300s
-export NB_MSGS="10000,10000,100000,300000,1000000"
+
 echo ""
 echo "Starting reader..."
 echo ""

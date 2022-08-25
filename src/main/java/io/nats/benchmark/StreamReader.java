@@ -14,6 +14,7 @@ import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
 import com.codahale.metrics.Snapshot;
 import io.nats.benchmark.events.ReadSessionStartEvent;
 import io.nats.benchmark.events.ReadSessionEndEvent;
+import io.nats.benchmark.events.TestEvent;
 import io.nats.benchmark.types.PullMode;
 import io.nats.client.Connection;
 import io.nats.client.JetStream;
@@ -32,7 +33,38 @@ import java.util.UUID;
 
 public class StreamReader
 {
-    ;
+
+
+    private static void argError(String message) {
+        System.err.println(getUsage());
+        System.err.println("FATAL ERROR: " + message);
+        System.exit(5);
+    }
+
+
+    private static String getUsage() {
+        final String usage = "" +
+                " Options: \n" +
+                "\n" +
+                "   -s <host:[port]>                    alternate NATS API server (default is localhost:4222) \n" +
+                "   --flow   <flowName>                 the flow into which to read (default is 'testflow'). \n" +
+                "                              It must be associated to a pre-created stream in the NATS cluster \n" +
+                "   --pull <batchSize>          Activates pull mode, with the provided size as the fetch size. \n" +
+                "                            Without this option, the reader operates in 'push' mode of jetstream. \n" +
+                "   --max-listening-sessions <sessionsCount>   Will exit after this number of messages reception sessions. \n" +
+                "                           A session starts when a message is received, and continues until no message is \n" +
+                "                           received for more than 5 seconds. Without this setting, reader never stops. \n" +
+                "   --test-id   <id string>            Allow to customize testId field in json output, for traceability \n" +
+                "                                      purposes (default is 'test')  \n" +
+                "   -v                        Activatest metadata dump at each received message. \n" +
+                "   --client-id  <clientId>       Activate shared/persistent consumer mode. \n" +
+                "                               Readers with same clientId on same input flow will share the flow and \n" +
+                "                               continue consuming only previously unacknowleged messages. \n" +
+                 "   --json                              activates json output (1 line per document) to ease post-processing/indexing of events and metrics \n" +
+                "                                      One start and one stop events will be produced for each listening session. \n";
+
+        return usage;
+    }
 
     public static void main( String[] args )
     {
@@ -56,22 +88,43 @@ public class StreamReader
         for (int argi=0 ; argi < args.length ; argi++) {
             String arg=args[argi];
             switch (arg) {
+                case "--help":
+                    System.out.println(getUsage());
+                    System.exit(0);
                 case "--pull":
                     pullMode = PullMode.PULL;
                     argi++;
-                    batchSize = Integer.parseInt(args[argi]);
+                    try {
+                        batchSize = Integer.parseInt(args[argi]);
+                    } catch (Exception e){
+                        argError("Expecting fetch batch size after '" + arg + "' .");
+                    }
                     break;
                 case "--flow":
                     argi++;
-                    flow = args[argi];
+                    try {
+                        flow = args[argi];
+                    } catch (Exception e){
+                        argError("Expecting flow name after '" + arg + "' .");
+                    }
                     break;
                 case "--max-listening-sessions":
                     argi++;
-                    maxListeningSessions = Integer.parseInt(args[argi]);
+                    try {
+                        maxListeningSessions = Integer.parseInt(args[argi]);
+                    } catch (Exception e){
+                        argError("Expecting number of listening sessions '" + arg + "' .");
+                    }
                     break;
                 case "-s":
                     argi++;
-                    server = args[argi];
+                    try {
+                        server = args[argi];
+                    } catch (Exception e){
+                        argError("Expecting <server[:port]> argument after '-s'.");
+                    }
+
+
                     break;
                 case "-v":
                     isVerbose = true;
@@ -81,11 +134,20 @@ public class StreamReader
                     break;
                 case "--test-id":
                     argi++;
-                    testId = args[argi];
-                    break;
+                    try {
+                        testId = args[argi];
+                    } catch (Exception e){
+                        argError("Expecting <testId> argument after '--test-id'.");
+                    }
+
+                        break;
                 case "--client-id":
                     argi++;
-                    clientId = args[argi];
+                    try {
+                        clientId = args[argi];
+                    } catch (Exception e){
+                        argError("Expecting persistent client <clientId> argument after '--client-id'.");
+                    }
                     break;
                 default:
                     System.err.println(String.format("Unexpected parameter '%s'.",arg));
@@ -93,8 +155,7 @@ public class StreamReader
             }
         }
 
-
-//        responseSizes.update(response.getContent().length);
+        TestEvent.initContext(flow, testId);
 
         try (Connection nc = Nats.connect("nats://" + server )) {
             JetStream js = nc.jetStream();
@@ -129,7 +190,10 @@ public class StreamReader
 
             if (! isJsonOutput) { System.out.println(pullMode.toString() + " consumer mode");}
             if (clientId == null) {
-                clientId = pullMode.toString().toLowerCase() + "-client";
+                clientId = System.getenv("HOSTNAME");
+                if (clientId == null) {
+                    clientId = pullMode.toString().toLowerCase() + "-client";
+                }
             }
 
             if (pullMode == PullMode.PULL) {

@@ -39,7 +39,7 @@ Please ensure that you have a correctly configured KUBECONFIG:
 Note: topic initialization can be done using 'nats create'. When running in a cluster, this tool is useful to simplify testing process,
 in particular because this init subcommand will delete the topic and re-create it (except if '--no-delete' arg is provided)
 
-	docker run -it --rm --add-host=host.docker.internal:host-gateway nats-tester init -s host.docker.internal:4222 --stream mystream --flow myflow
+	docker run -it --rm --add-host=host.docker.internal:host-gateway nats-tester init -s host.docker.internal:4222 --stream teststream --flow testflow
 
 
 
@@ -59,7 +59,7 @@ Typical errors:
 
 * With human-intended console logging, 40 000 messages, synchronously (1 message at a time)
 
-	docker run -it --rm --add-host=host.docker.internal:host-gateway nats-tester writer -s host.docker.internal:4222 --flow myflow -n 40000
+	docker run -it --rm --add-host=host.docker.internal:host-gateway nats-tester writer -s host.docker.internal:4222 --flow testflow -n 40000
 
 * With machine-intended console json logging, 100 000 messages, assynchronously (5000 messages acks waiting at a time)
 
@@ -70,7 +70,7 @@ Typical errors:
 
 * With human-intended console logging, in 'push mode' 
 
-	docker run -it --rm --add-host=host.docker.internal:host-gateway nats-tester reader -s host.docker.internal:4222 --flow myflow
+	docker run -it --rm --add-host=host.docker.internal:host-gateway nats-tester reader -s host.docker.internal:4222 
 
 
 * With human-intended console logging, in 'pull mode' with a 1000-messages fetching strategy
@@ -85,12 +85,15 @@ Typical errors:
 	kubectl apply -f k8s/init-job.yaml --wait
 
 
+
+
 ## Running reader in k8s
 
 
 	kubectl apply -f k8s/writer-job.yaml 
 	kubectl apply -f k8s/pull-reader-job.yaml 
-	klogs -l job-name=nats-pull-reader # Do not stop the reader (at first, it receives nothing) : 
+
+	klogs -l job-name=nats-pull-reader # Do not stop this logs dumper (at first, it receives nothing) : 
 									   # start the writer in an other window
 	kubectl apply -f k8s/writer-job.yaml  
 
@@ -117,7 +120,7 @@ Typical errors:
  nats stream purge teststream
 
 
-## Test run
+## Test run (simple)
 
 * Have an available elasticsearch locally. E.g.:
 
@@ -134,9 +137,22 @@ Typical errors:
 	cd k8s
 	./run-test.sh  | ./es_indexer.sh 
 
+	The test script may vary depending on the scenario
 
-* Go to kibana 
+* Go to kibana in the latencies view (to be imported from resources directory)
 
+## Actual test command lines
+
+
+* 1 stream receiving 200 messages/s, 1 reader pod only
+	doing 4 successives injection session to allow for warming up emission/reception JVMs.
+    Only the 4th session metrics are useful, although latencies seem to stabilize in 2nd or 3rd session...
+
+	NB_READERS=1 NB_FLOWS=1 MAX_MSG_RATE=200 BATCH_SIZE=200 TEST_ID=test-1-1-200 NB_MSGS="1000,2000,10000,45000" ./run-competitive-streams-test.sh   | ./es_indexer.sh 
+
+* Multiple independnt streams (from 2 to 5), each receiving 200 msgs per second. Each stream is listened by 2 to 5 processing pods (multiple reading of all data)
+
+	for NB_READERS in 2 3 4 5 ; do export NB_READERS ; for NB_FLOWS in 2 3 4 5 ; do export NB_FLOWS ; MAX_MSG_RATE=200 BATCH_SIZE=5000 TEST_ID=test-${NB_READERS}-${NB_FLOWS}-${MAX_MSG_RATE}-${BATCH_SIZE} NB_MSGS="1000,2000,10000,45000" ./run-competitive-streams-test.sh | ./es_indexer.sh ; done ; done
 
 
 ## Tricks

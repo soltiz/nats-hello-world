@@ -2,12 +2,14 @@
 
 # This script runs a stream init to ensure stream is created with appropriate parameters
 
-TEST_ID="$(date +%s)"
-JOB_NAME=stream-init-${TEST_ID}
-STREAM=mystream
-FLOW=myflow
+: ${TEST_ID:="$(date +%s)"}
+: ${STREAM_NAME:=mystream}
+: ${FLOW_NAME:=myflow}
 : ${REPLICAS:=1}
 : ${TIMEOUT:=20s}
+
+echo "Init for stream '${STREAM_NAME}'..."
+JOB_NAME=stream-init-${STREAM_NAME}
 
 
 echo "Starting '${JOB_NAME}' job..."
@@ -30,9 +32,9 @@ spec:
             - -s
             - nats.default:4222
             - --stream
-            - ${STREAM}
+            - ${STREAM_NAME}
             - --flow
-            - ${FLOW}
+            - ${FLOW_NAME}
             - --replicas
             - "${REPLICAS}"
 EOF

@@ -30,7 +30,7 @@ public class WriteSessionStartEvent extends TestEvent {
     String flow;
 
     public WriteSessionStartEvent(String testId, int sessionIndex, Instant startTime, SyncMode syncMode, int nbMessages, String flow) {
-        super(testId);
+        super();
         this.sessionIndex = sessionIndex;
         this.startTime = startTime;
         this.syncMode = syncMode;

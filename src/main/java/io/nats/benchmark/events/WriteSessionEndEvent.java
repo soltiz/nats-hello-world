@@ -33,7 +33,7 @@ public class WriteSessionEndEvent extends TestEvent{
     }
 
     public WriteSessionEndEvent(String testId, int sessionIndex, SyncMode syncMode, Instant lastEventTime, int nbMessages, Double emissionDurationSeconds, int msgRate) {
-        super(testId);
+        super();
         this.sessionIndex = sessionIndex;
         this.syncMode = syncMode;
         this.lastEventTime = lastEventTime;

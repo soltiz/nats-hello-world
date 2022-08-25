@@ -95,7 +95,7 @@ public class ReadSessionEndEvent extends TestEvent {
             double avgLatencyMs,
             double stdDeviationLatencyMs,
             int metrics_samples_size) {
-        super(testId);
+        super();
         this.startTime = startTime;
         this.lastReceptionTime = lastReceptionTime;
         this.sessionIndex = sessionIndex;

@@ -42,4 +42,8 @@ public class StreamRecord implements Serializable {
     public Instant getCreation() {
         return creation;
     }
+
+    public void updateCreationTime() {
+        creation = Instant.now();
+    }
 }

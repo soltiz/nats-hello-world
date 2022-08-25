@@ -7,22 +7,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.support.JsonSerializable;
 
 public abstract class TestEvent implements JsonSerializable {
-    String testId;
+    static String testId;
+    static String flowName;
+
+    public static void initContext(String flowName, String testId) {
+        TestEvent.flowName = flowName;
+        TestEvent.testId = testId;
+    }
+
 
     public String getEventTs() {
         return eventTs.toString();
     }
 
     Instant eventTs;
-    public TestEvent(String testId) {
+    public TestEvent() {
 
-        this.testId = testId;
         this.eventTs = Instant.now();
     }
 
-    public String getTestId() {
-        return testId;
-    }
 
     public String toJson()  {
         ObjectMapper mapper = new ObjectMapper();
@@ -34,5 +37,14 @@ public abstract class TestEvent implements JsonSerializable {
     }
 
     public abstract String getEventType();
+
+    public String getTestId() {
+        return testId;
+    }
+
+    public String getFlowName() {
+        return flowName;
+    }
+
 }
 

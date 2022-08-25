@@ -3,16 +3,20 @@
 # This script runs a PUSH reader job, that will accept 3 listening sessions, then stop
 
 TEST_NUM="$(date +%s)"
-: ${TEST_ID:=${TEST_NUM}}
 : ${NB_MSGS:=10000}
-: ${TIMEOUT:=120s}
+: ${FLOW_NAME:=myflow}
+: ${TEST_ID:=pull-${TEST_NUM}}
+: ${TIMEOUT:=900s}
 : ${BATCH_SIZE:=200}
+: ${SESSIONS_INTERVAL:=20}
+: ${MAX_MSG_RATE:=0}
+echo "RATE=${MAX_MSG_RATE}"
 
-JOB_NAME=writer-${TEST_ID}
+JOB_NAME=writer-${TEST_ID}-${FLOW_NAME}
 
 
 
-echo "Starting '${JOB_NAME}' job..."
+echo "Starting '${JOB_NAME}' job to send ${NB_MSGS} messages..."
 
 kubectl apply -f - << EOF
 apiVersion: batch/v1
@@ -21,6 +25,10 @@ metadata:
   name: ${JOB_NAME}
 spec:
   template:
+    metadata:
+      labels:
+        app: nats-writer
+        app.kubernetes.io/instance: nats-writer
     spec:
       restartPolicy: Never
       containers:
@@ -35,11 +43,15 @@ spec:
             - -n
             - "${NB_MSGS}"
             - --flow
-            - myflow
+            - ${FLOW_NAME}
             - --test-id
-            - "pull-test-${TEST_ID}"
+            - "${TEST_ID}"
             - --async-batches
             - "${BATCH_SIZE}"
+            - --interval-between-sessions
+            - "${SESSIONS_INTERVAL}"
+            - --max-rate
+            - "${MAX_MSG_RATE}"
 EOF
 
 
@@ -47,13 +59,17 @@ EOF
 
 { 
   kubectl wait --for=condition=Ready pods -l job-name=${JOB_NAME} --timeout=${TIMEOUT}
-  echo "Writer pod is running. following pods logs..."
+  echo "Writer pods are running for job/${JOB_NAME}. following pods logs..."
   kubectl logs -l job-name=${JOB_NAME} --tail -1 -f
 } &
+LISTENER=$!
 
 
 kubectl wait --for=condition=Complete job/${JOB_NAME} --timeout=${TIMEOUT}
-echo "Writer pod completed."
+echo "Writer pod completed for job/${JOB_NAME}."
+
+wait $LISTENER
+
 
 kubectl delete job "${JOB_NAME}"
 
